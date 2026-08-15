@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>~/nosotros · corazon.repo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --crt-black:#0d0904;
+    --crt-amber:#ffb000;
+    --crt-amber-dim:#c97e15;
+    --crt-ember:#ff6a1a;
+    --crt-yellow:#ffe066;
+    --crt-scan:#1a1108;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; height:100%; }
+  body{
+    min-height:100vh;
+    font-family:'JetBrains Mono', monospace;
+    background:
+      radial-gradient(circle at 18% 18%, rgba(255,105,180,.16), transparent 24%),
+      radial-gradient(circle at 82% 78%, rgba(111,78,255,.18), transparent 28%),
+      radial-gradient(ellipse 65% 55% at 50% 45%, rgba(86,50,140,.16), transparent 70%),
+      linear-gradient(145deg, #05030b 0%, #0b0616 45%, #12071b 100%);
+    color:var(--crt-amber);
+    display:flex; align-items:center; justify-content:center;
+    padding:22px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  /* scanlines over everything */
+  body::before{
+    content:'';
+    position:fixed; inset:0;
+    background:repeating-linear-gradient(180deg, rgba(0,0,0,.25) 0px, rgba(0,0,0,.25) 1px, transparent 2px, transparent 3px);
+    mix-blend-mode:multiply;
+    pointer-events:none;
+    z-index:30;
+    opacity:.5;
+  }
+  body::after{
+    content:'';
+    position:fixed; inset:0;
+    box-shadow:inset 0 0 140px rgba(0,0,0,.75);
+    pointer-events:none;
+    z-index:31;
+  }
+
+  button{ font-family:inherit; cursor:pointer; }
+  button:focus-visible{ outline:2px solid var(--crt-yellow); outline-offset:3px; }
+
+  .glow{ text-shadow:0 0 10px rgba(255,176,0,.55), 0 0 22px rgba(255,106,26,.25); }
+
+  .pixel-dust{
+    position:fixed; bottom:-6px;
+    width:3px; height:3px;
+    background:var(--crt-amber);
+    opacity:.45;
+    animation:rise linear infinite;
+    pointer-events:none;
+    z-index:1;
+  }
+  @keyframes rise{
+    0%{ transform:translateY(0); opacity:.5; }
+    100%{ transform:translateY(-100vh); opacity:0; }
+  }
+
+  /* ---------- ROMANTIC NIGHT SKY ---------- */
+  #youtubePlayer{
+    position:fixed;
+    left:-1000px;
+    top:10px;
+    width:200px;
+    height:200px;
+    opacity:0.01;
+    pointer-events:none;
+    z-index:-1;
+  }
+
+  .stars{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:0;
+    opacity:.9;
+    background-image:
+      radial-gradient(circle, rgba(255,255,255,.9) 0 1px, transparent 1.5px),
+      radial-gradient(circle, rgba(255,190,230,.7) 0 1px, transparent 1.5px),
+      radial-gradient(circle, rgba(180,180,255,.7) 0 1px, transparent 1.5px);
+    background-size: 97px 113px, 151px 137px, 211px 179px;
+    background-position: 13px 29px, 71px 11px, 31px 83px;
+  }
+
+  /* ---------- BOOT SCREEN ---------- */
+  .boot-screen{
+    width:100%; max-width:520px;
+    z-index:5;
+  }
+  .boot-lines{
+    min-height:170px;
+    font-size:.88rem;
+    line-height:1.75;
+  }
+  .boot-lines .prompt::before{ content:'$ '; color:var(--crt-amber-dim); }
+  .boot-lines .out{ color:var(--crt-amber-dim); padding-left:2px; }
+  .cursor{
+    display:inline-block; width:9px; height:1.1em;
+    background:var(--crt-amber);
+    vertical-align:middle; margin-left:2px;
+    animation:blink 1s step-end infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .boot-start{
+    display:none;
+    margin-top:18px;
+    background:transparent;
+    border:1px solid var(--crt-amber);
+    color:var(--crt-amber);
+    padding:12px 26px;
+    border-radius:4px;
+    font-size:.95rem;
+    letter-spacing:.05em;
+    transition:background .2s ease, color .2s ease, box-shadow .2s ease;
+  }
+  .boot-start:hover{ background:var(--crt-amber); color:var(--crt-black); box-shadow:0 0 26px rgba(255,176,0,.5); }
+
+  /* ---------- TERMINAL WINDOW (shared shell) ---------- */
+  .term-window{
+    background:#120b04;
+    border:1px solid rgba(255,176,0,.3);
+    border-radius:10px;
+    box-shadow:0 30px 70px rgba(0,0,0,.6), 0 0 60px rgba(255,105,180,.10);
+    overflow:hidden;
+    position:relative;
+    z-index:2;
+  }
+  .term-bar{
+    display:flex; align-items:center; gap:8px;
+    padding:10px 14px;
+    background:#1a1008;
+    border-bottom:1px solid rgba(255,176,0,.15);
+  }
+  .term-dot{ width:10px;height:10px;border-radius:50%; }
+  .term-dot:nth-child(1){ background:var(--crt-ember); }
+  .term-dot:nth-child(2){ background:var(--crt-amber); }
+  .term-dot:nth-child(3){ background:var(--crt-yellow); }
+  .term-path{
+    margin-left:8px;
+    font-size:.72rem;
+    color:var(--crt-amber-dim);
+    letter-spacing:.02em;
+  }
+
+  /* ---------- MAIN REPO VIEW ---------- */
+  .repo-wrap{ display:none; width:100%; max-width:480px; z-index:5; }
+  .repo-wrap.visible{ display:block; animation:popIn .5s ease; }
+  @keyframes popIn{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:none;} }
+
+  .repo-body{ padding:22px; position:relative; }
+  .repo-body.glitching .commit-card{ opacity:0; filter:blur(1.5px); }
+  .glitch-overlay{
+    position:absolute; inset:0;
+    opacity:0;
+    transition:opacity .1s linear;
+    pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(255,176,0,.06) 0 2px, transparent 2px 5px);
+    mix-blend-mode:screen;
+  }
+  .repo-body.glitching .glitch-overlay{ opacity:1; }
+
+  .log-count{
+    font-size:.72rem;
+    color:var(--crt-amber-dim);
+    margin-bottom:14px;
+    letter-spacing:.03em;
+  }
+
+  .commit-card{ transition:opacity .15s ease, filter .15s ease; text-align:left; }
+  .file-badge{
+    width:44px; height:44px;
+    border:1px solid var(--crt-amber);
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'VT323', monospace;
+    font-size:1.4rem;
+    color:var(--crt-amber);
+    box-shadow:0 0 16px rgba(255,176,0,.25);
+    animation:pulse 2.4s ease-in-out infinite;
+    margin-bottom:14px;
+  }
+  @keyframes pulse{ 0%,100%{ box-shadow:0 0 10px rgba(255,176,0,.2);} 50%{ box-shadow:0 0 22px rgba(255,176,0,.45);} }
+  @media (prefers-reduced-motion:reduce){ .file-badge{ animation:none; } }
+
+  .commit-hash{ font-size:.75rem; color:var(--crt-amber-dim); margin:0 0 6px; }
+  .commit-hash span{ color:var(--crt-amber); }
+  .commit-title{
+    font-family:'VT323', monospace;
+    font-size:1.7rem;
+    color:var(--crt-yellow);
+    margin:0 0 14px;
+    letter-spacing:.02em;
+  }
+  .commit-msg{
+    font-size:.85rem;
+    line-height:1.65;
+    color:var(--crt-amber);
+    max-width:380px;
+    min-height:4.5em;
+  }
+  .commit-msg::before{ content:'# '; color:var(--crt-amber-dim); }
+
+  /* history rail */
+  .rail{ margin-top:26px; }
+  .rail-track{
+    position:relative; height:4px; border-radius:2px;
+    background:rgba(255,176,0,.15);
+  }
+  .rail-fill{
+    position:absolute; left:0; top:0; bottom:0; width:0%;
+    background:linear-gradient(90deg, var(--crt-ember), var(--crt-amber));
+    border-radius:2px;
+    transition:width .5s cubic-bezier(.4,0,.2,1);
+  }
+  .rail-caret{
+    position:absolute; top:-9px; left:0%;
+    width:0; height:0;
+    border-left:6px solid transparent; border-right:6px solid transparent;
+    border-top:8px solid var(--crt-yellow);
+    filter:drop-shadow(0 0 6px rgba(255,224,102,.8));
+    transition:left .5s cubic-bezier(.4,0,.2,1);
+    transform:translateX(-6px);
+  }
+  .rail-label{
+    margin-top:10px; font-size:.72rem; color:var(--crt-amber-dim);
+  }
+  .rail-label span{ color:var(--crt-amber); }
+
+  .controls{ display:flex; align-items:center; justify-content:center; gap:16px; margin-top:22px; }
+  .ctrl-btn{
+    background:transparent;
+    border:1px solid rgba(255,176,0,.4);
+    color:var(--crt-amber);
+    width:42px; height:42px;
+    border-radius:6px;
+    font-size:1rem;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s ease, transform .15s ease;
+  }
+  .ctrl-btn:hover{ background:rgba(255,176,0,.12); transform:translateY(-1px); }
+  .ctrl-btn.main{ border-color:var(--crt-yellow); color:var(--crt-yellow); }
+
+  .eq{ display:inline-flex; align-items:flex-end; gap:2px; height:16px; opacity:0; transition:opacity .2s ease; }
+  .eq.show{ opacity:1; }
+  .eq span{ width:3px; background:var(--crt-yellow); border-radius:2px; animation:eqBounce .9s ease-in-out infinite; }
+  .eq span:nth-child(2){ animation-delay:.2s; }
+  .eq span:nth-child(3){ animation-delay:.4s; }
+  @keyframes eqBounce{ 0%,100%{ height:3px; } 50%{ height:16px; } }
+  @media (prefers-reduced-motion:reduce){ .eq span{ animation:none; height:8px; } }
+
+  .audio-hint{
+    min-height:1.2em; margin-top:10px;
+    font-size:.72rem; color:var(--crt-amber-dim);
+    text-align:center;
+  }
+
+  .dots{ display:flex; justify-content:center; gap:6px; margin-top:16px; }
+  .dots span{
+    width:6px; height:6px; border-radius:1px;
+    background:rgba(255,176,0,.25);
+    transition:background .2s ease, transform .2s ease;
+  }
+  .dots span.active{ background:var(--crt-amber); transform:scale(1.25); }
+
+  /* ---------- COMPILE SCREEN ---------- */
+  .compile-screen{ display:none; width:100%; max-width:480px; z-index:5; }
+  .compile-screen.visible{ display:block; animation:popIn .4s ease; }
+  .compile-body{ padding:26px; font-size:.85rem; line-height:1.9; }
+  .bar-track{
+    margin-top:14px; height:16px;
+    border:1px solid rgba(255,176,0,.35);
+    border-radius:3px; overflow:hidden;
+  }
+  .bar-fill{
+    height:100%; width:0%;
+    background:linear-gradient(90deg, var(--crt-ember), var(--crt-yellow));
+    transition:width .1s linear;
+  }
+  .bar-pct{ margin-top:8px; color:var(--crt-amber-dim); }
+
+  /* ---------- PROPOSAL ---------- */
+  .proposal-screen{ display:none; width:100%; max-width:480px; z-index:5; }
+  .proposal-screen.visible{ display:block; animation:popIn .5s ease; }
+  .term-body{ padding:22px; min-height:120px; }
+  .term-body .line{ font-size:.85rem; color:var(--crt-amber-dim); margin-bottom:8px; }
+  .term-body .line.echo::before{ content:'> '; }
+  .term-body .question{
+    font-family:'VT323', monospace;
+    font-size:1.6rem;
+    color:var(--crt-yellow);
+    margin:14px 0 18px;
+    line-height:1.3;
+  }
+  .term-buttons{ display:flex; gap:14px; position:relative; min-height:56px; }
+  .y-btn, .n-btn{
+    border-radius:5px; padding:12px 22px; font-weight:700; font-size:.9rem;
+    border:1px solid var(--crt-amber);
+  }
+  .y-btn{ background:var(--crt-amber); color:var(--crt-black); box-shadow:0 0 20px rgba(255,176,0,.4); }
+  .n-btn{ background:transparent; color:var(--crt-amber); position:relative; }
+  .dodge-hint{ margin-top:14px; font-size:.75rem; color:var(--crt-amber-dim); opacity:0; transition:opacity .3s ease; }
+  .dodge-hint.show{ opacity:1; }
+
+  .success-block{ margin-top:6px; }
+  .success-block .line{ color:var(--crt-yellow); }
+  .stamp-line{ margin-top:14px; color:var(--crt-amber-dim); font-style:normal; }
+
+  .confetti-piece{
+    position:fixed; top:-5vh;
+    font-size:1rem;
+    pointer-events:none;
+    animation:fall linear forwards;
+    z-index:40;
+  }
+  @keyframes fall{ to{ transform:translateY(112vh) rotate(var(--rot,180deg)); } }
+
+  @media (prefers-reduced-motion:reduce){
+    .confetti-piece, .pixel-dust{ display:none; }
+    .cursor{ animation:none; }
+  }
+
+  @media (max-width:420px){
+    .repo-body, .compile-body, .term-body{ padding:16px; }
+  }
+</style>
+</head>
+<body>
+<div class="stars" aria-hidden="true"></div>
+
+<div class="boot-screen" id="bootScreen">
+  <div class="term-window">
+    <div class="term-bar">
+      <div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div>
+      <span class="term-path">steven@corazon:~$</span>
+    </div>
+    <div class="repo-body">
+      <div class="boot-lines" id="bootLines"></div>
+      <button class="boot-start" id="bootStartBtn">./iniciar.sh ▶</button>
+    </div>
+  </div>
+</div>
+
+<div class="repo-wrap" id="repoWrap">
+  <div class="term-window">
+    <div class="term-bar">
+      <div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div>
+      <span class="term-path">steven@corazon:~/nosotros$</span>
+    </div>
+    <div class="repo-body" id="repoBody">
+      <div class="glitch-overlay"></div>
+      <div class="log-count" id="logCount">git log --oneline (1/8)</div>
+      <div class="commit-card">
+        <div class="file-badge" id="fileBadge">01</div>
+        <p class="commit-hash">commit <span id="hashText">a3f9c21</span></p>
+        <p class="commit-title" id="titleText"></p>
+        <p class="commit-msg" id="msgText"></p>
+      </div>
+
+      <div class="rail">
+        <div class="rail-track">
+          <div class="rail-fill" id="railFill"></div>
+          <div class="rail-caret" id="railCaret"></div>
+        </div>
+        <div class="rail-label">HEAD → <span id="headHash">a3f9c21</span></div>
+      </div>
+
+      <div class="controls">
+        <button class="ctrl-btn" id="prevBtn" aria-label="commit anterior">◀</button>
+        <button class="ctrl-btn main" id="playBtn" aria-label="reproducir canción"><span id="playIcon">▶</span></button>
+        <span class="eq" id="eqBars"><span></span><span></span><span></span></span>
+        <button class="ctrl-btn" id="nextBtn" aria-label="siguiente commit">▶</button>
+      </div>
+      <div class="dots" id="dots"></div>
+      <div class="audio-hint" id="audioHint"></div>
+      <div id="youtubePlayer" aria-hidden="true"></div>
+    </div>
+  </div>
+</div>
+
+<div class="compile-screen" id="compileScreen">
+  <div class="term-window">
+    <div class="term-bar">
+      <div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div>
+      <span class="term-path">steven@corazon:~/nosotros$</span>
+    </div>
+    <div class="compile-body">
+      <div>$ pyinstaller propose.py</div>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="bar-pct" id="barPct">compilando corazon_y_zyelo.exe... 0%</div>
+    </div>
+  </div>
+</div>
+
+<div class="proposal-screen" id="proposalScreen">
+  <div class="term-window">
+    <div class="term-bar">
+      <div class="term-dot"></div><div class="term-dot"></div><div class="term-dot"></div>
+      <span class="term-path">steven@corazon:~/nosotros$</span>
+    </div>
+    <div class="term-body" id="termBody"></div>
+  </div>
+</div>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+  /* ======================================================
+     ✏️ EDITA AQUÍ: título, artista y mensaje de cada commit.
+  ====================================================== */
+  const tracks = [
+    { hash:"a3f9c21", title:"Breaking the Habit — Linkin Park", youtube:"v2H4l9RpkwM",
+      msg:"Existías, y eso bastó para romper hábitos que llevaba años sin atreverme a soltar. No fue voluntad: fuiste tú, empujándome sin saberlo." },
+    { hash:"7b2e4f0", title:"Paradise — iVAN · Alien Stage", youtube:"ekSuZga5cM8",
+      msg:"Bastaron unas semanas para que algo sin nombre empezara a arder en mí. Celos, urgencia, la certeza exacta de querer que me vieras solo a mí." },
+    { hash:"c891d3a", title:"So Good — Weston Estate", youtube:"sjomZzrFYeQ",
+      msg:"El día que dijiste \"te amo\" el mundo entero bajó el volumen. Sigo sin poder creer del todo que algo tan bueno me haya pasado a mí." },
+    { hash:"1f4a8e2", title:"Value — Ado", youtube:"5iAQF_q6FSk",
+      msg:"Esto sonaba en los días en que cargaba un secreto que pesaba más de lo que podía sostener: lo que sentía por ti, guardado, quemándome por dentro." },
+    { hash:"9d3c7b1", title:"Senseless Wonder — HITORIE", youtube:"o5VQbrrrpgs",
+      msg:"El segundo exacto en el que dejé de dudar. No hubo proceso ni razones, solo una certeza total: eras tú." },
+    { hash:"e2f81a4", title:"Common Decency — Violent Vira", youtube:"UVNjBmbKltM",
+      msg:"Por fuera dudaba en dar el paso; por dentro gritaba tu nombre. El miedo a perderte por cobarde pesaba más que el miedo a lanzarme." },
+    { hash:"4b7d0f9", title:"Haru ni Mau — Ado", youtube:"xIYfDbkq-SM",
+      msg:"Como la primavera después de un invierno largo, algo que creía enterrado volvió a florecer en mí. Intenso, bonito, y completamente tuyo." },
+    { hash:"8a1c3e5", title:"One Last Kiss — Hikaru Utada", youtube:"0Uhh62MUEic",
+      msg:"Sigues proyectada en la pantalla más honesta que tengo: mi memoria. Hay recuerdos que decidí archivar para siempre, y tú ocupas los mejores." },
+  ];
+
+  /* ---------- BOOT SEQUENCE ---------- */
+  const bootLinesData = [
+    { type:'prompt', text:'whoami' },
+    { type:'out', text:'steven' },
+    { type:'prompt', text:'cat primer_encuentro.log' },
+    { type:'out', text:'[domingo · 05:00 a.m.] Te escribí el primer mensaje con la pequeña esperanza de que respondieras.' },
+    { type:'out', text:'Terminé gastando la suerte de una infinidad de vidas, solo por conocerte.' },
+    { type:'prompt', text:'git clone corazon.repo nosotros' },
+    { type:'out', text:'Clonando en \'nosotros\'... listo.' },
+  ];
+  const bootLinesEl = document.getElementById('bootLines');
+  let bootIdx = 0;
+
+  function typeInto(el, text, speed, done){
+    let i = 0;
+    const iv = setInterval(() => {
+      el.textContent = text.slice(0, i+1);
+      i++;
+      if (i >= text.length){ clearInterval(iv); if (done) done(); }
+    }, speed);
+  }
+
+  function runBootLine(){
+    if (bootIdx >= bootLinesData.length){
+      document.getElementById('bootStartBtn').style.display = 'inline-block';
+      return;
+    }
+    const item = bootLinesData[bootIdx];
+    const row = document.createElement('div');
+    row.className = item.type === 'prompt' ? 'prompt' : 'out';
+    bootLinesEl.appendChild(row);
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    typeInto(row, item.text, item.type === 'prompt' ? 34 : 14, () => {
+      bootIdx++;
+      setTimeout(runBootLine, item.type === 'prompt' ? 220 : 420);
+    });
+    row.after(cursor);
+    setTimeout(() => cursor.remove(), (item.text.length * (item.type==='prompt'?34:14)) + 50);
+  }
+  runBootLine();
+
+  document.getElementById('bootStartBtn').addEventListener('click', () => {
+    document.getElementById('bootScreen').style.display = 'none';
+    document.getElementById('repoWrap').classList.add('visible');
+    renderTrack(0, true);
+  });
+
+  /* ---------- REPO / COMMIT VIEW ---------- */
+  let current = 0;
+  const repoBody = document.getElementById('repoBody');
+  const fileBadge = document.getElementById('fileBadge');
+  const hashText = document.getElementById('hashText');
+  const headHash = document.getElementById('headHash');
+  const titleText = document.getElementById('titleText');
+  const msgText = document.getElementById('msgText');
+  const railFill = document.getElementById('railFill');
+  const railCaret = document.getElementById('railCaret');
+  const logCount = document.getElementById('logCount');
+  const dotsWrap = document.getElementById('dots');
+
+  tracks.forEach((_, i) => {
+    const d = document.createElement('span');
+    if (i === 0) d.classList.add('active');
+    dotsWrap.appendChild(d);
+  });
+
+  function paintTrack(i, typewriter){
+    const t = tracks[i];
+    fileBadge.textContent = String(i+1).padStart(2,'0');
+    hashText.textContent = t.hash;
+    headHash.textContent = t.hash;
+    titleText.textContent = t.title;
+    logCount.textContent = `git log --oneline (${i+1}/${tracks.length})`;
+    const pct = (i / (tracks.length - 1)) * 100;
+    railFill.style.width = pct + '%';
+    railCaret.style.left = pct + '%';
+    [...dotsWrap.children].forEach((d, idx) => d.classList.toggle('active', idx === i));
+    if (typewriter){
+      msgText.textContent = '';
+      typeInto(msgText, t.msg, 14);
+    } else {
+      msgText.textContent = t.msg;
+    }
+    loadAudio(i);
+  }
+
+  function renderTrack(i, instant){
+    if (instant){ paintTrack(i, true); return; }
+    repoBody.classList.add('glitching');
+    setTimeout(() => {
+      paintTrack(i, true);
+      repoBody.classList.remove('glitching');
+    }, 200);
+  }
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (current < tracks.length - 1){
+      current++;
+      renderTrack(current);
+    } else {
+      startCompile();
+    }
+  });
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    if (current > 0){
+      current--;
+      renderTrack(current);
+    }
+  });
+  /* ---------- YOUTUBE AUDIO ---------- */
+  let youtubePlayer = null;
+  let youtubeReady = false;
+  let musicWasPlaying = false;
+
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const eqBars = document.getElementById('eqBars');
+  const audioHint = document.getElementById('audioHint');
+
+  window.onYouTubeIframeAPIReady = function(){
+    const playerVars = {
+      autoplay: 0, controls: 0, disablekb: 1, fs: 0,
+      iv_load_policy: 3, playsinline: 1, rel: 0
+    };
+
+    // YouTube recommends an explicit origin for hosted pages.
+    // For file:// pages, no usable web origin exists, so leave it out.
+    if (location.protocol === 'http:' || location.protocol === 'https:'){
+      playerVars.origin = location.origin;
+    }
+
+    youtubePlayer = new YT.Player('youtubePlayer', {
+      height: '200', width: '200',
+      videoId: tracks[current].youtube,
+      playerVars: playerVars,
+      events: {
+        onReady: function(){
+          youtubeReady = true;
+          audioHint.textContent = '';
+        },
+        onStateChange: function(event){
+          if (event.data === YT.PlayerState.PLAYING){
+            musicWasPlaying = true;
+            playIcon.textContent = '❚❚';
+            eqBars.classList.add('show');
+            audioHint.textContent = '';
+          } else if (event.data === YT.PlayerState.PAUSED){
+            playIcon.textContent = '▶';
+            eqBars.classList.remove('show');
+          } else if (event.data === YT.PlayerState.ENDED){
+            musicWasPlaying = false;
+            playIcon.textContent = '▶';
+            eqBars.classList.remove('show');
+          }
+        },
+        onError: function(event){
+          musicWasPlaying = false;
+          playIcon.textContent = '▶';
+          eqBars.classList.remove('show');
+
+          const messages = {
+            2: '🎵 Error de configuración del video.',
+            5: '🎵 YouTube no puede reproducir este video con el reproductor HTML5.',
+            100: '🎵 Este video no existe, fue eliminado o es privado.',
+            101: '🎵 El dueño de este video no permite reproducirlo fuera de YouTube.',
+            150: '🎵 El dueño de este video no permite reproducirlo fuera de YouTube.',
+            153: '🎵 YouTube no recibió la identificación del sitio. Prueba abrir esta página desde un servidor web (no con doble clic).'
+          };
+
+          audioHint.textContent =
+            messages[event.data] || `🎵 YouTube devolvió el error ${event.data}.`;
+        },
+        onAutoplayBlocked: function(){
+          musicWasPlaying = false;
+          playIcon.textContent = '▶';
+          eqBars.classList.remove('show');
+          audioHint.textContent = '🎵 El navegador bloqueó la reproducción automática. Pulsa ▶ para continuar.';
+        }
+      }
+    });
+  };
+
+  function loadAudio(i){
+    if (!youtubeReady || !youtubePlayer) return;
+    const shouldPlay = musicWasPlaying;
+    playIcon.textContent = '▶';
+    eqBars.classList.remove('show');
+    audioHint.textContent = '';
+    youtubePlayer.cueVideoById(tracks[i].youtube);
+    if (shouldPlay) youtubePlayer.playVideo();
+  }
+
+  playBtn.addEventListener('click', () => {
+    if (!youtubeReady || !youtubePlayer){
+      audioHint.textContent = '🎵 Cargando el reproductor de YouTube...';
+      return;
+    }
+    const state = youtubePlayer.getPlayerState();
+    if (state === YT.PlayerState.PLAYING){
+      youtubePlayer.pauseVideo();
+      musicWasPlaying = false;
+    } else {
+      musicWasPlaying = true;
+      youtubePlayer.playVideo();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('repoWrap').classList.contains('visible')){
+      if (e.key === 'ArrowRight') document.getElementById('nextBtn').click();
+      if (e.key === 'ArrowLeft') document.getElementById('prevBtn').click();
+    }
+  });
+
+  /* ---------- COMPILE ---------- */
+  function startCompile(){
+    document.getElementById('repoWrap').classList.remove('visible');
+    document.getElementById('repoWrap').style.display = 'none';
+    const cs = document.getElementById('compileScreen');
+    cs.classList.add('visible');
+    const barFill = document.getElementById('barFill');
+    const barPct = document.getElementById('barPct');
+    let p = 0;
+    const iv = setInterval(() => {
+      p += 2 + Math.random()*5;
+      if (p >= 100){
+        p = 100;
+        clearInterval(iv);
+        setTimeout(() => {
+          cs.classList.remove('visible');
+          cs.style.display = 'none';
+          document.getElementById('proposalScreen').classList.add('visible');
+          startProposal();
+        }, 500);
+      }
+      barFill.style.width = p + '%';
+      barPct.textContent = `compilando corazon_y_zyelo.exe... ${Math.floor(p)}%`;
+    }, 90);
+  }
+
+  /* ---------- PROPOSAL ---------- */
+  const termBody = document.getElementById('termBody');
+  let currentRow = null;
+
+  function addLine(text, cls){
+    const d = document.createElement('div');
+    d.className = 'line' + (cls ? ' ' + cls : '');
+    d.textContent = text;
+    termBody.appendChild(d);
+    return d;
+  }
+  function addQuestion(text){
+    const d = document.createElement('div');
+    d.className = 'question glow';
+    d.textContent = text;
+    termBody.appendChild(d);
+    return d;
+  }
+  function addButtonRow(onYes){
+    if (currentRow) currentRow.remove();
+    const row = document.createElement('div');
+    row.className = 'term-buttons';
+    const y = document.createElement('button');
+    y.className = 'y-btn'; y.textContent = '[Y] Sí';
+    const n = document.createElement('button');
+    n.className = 'n-btn'; n.textContent = '[n] No';
+    row.appendChild(y); row.appendChild(n);
+    termBody.appendChild(row);
+    currentRow = row;
+
+    let dodges = 0;
+    const hint = document.getElementById('dodgeHintGlobal');
+    function dodge(){
+      dodges++;
+      const b = row.getBoundingClientRect();
+      const maxX = Math.max(b.width - 100, 40);
+      const x = (Math.random()-0.4) * maxX;
+      const yOff = (Math.random()-0.8) * 70;
+      n.style.transform = `translate(${x}px, ${yOff}px)`;
+      if (hint){
+        hint.textContent = '¿POR QUÉ QUIERES DARLE A ESE BOTÓN?';
+        hint.classList.add('show');
+        hint.animate(
+          [
+            { transform:'translateX(0)', opacity:1 },
+            { transform:'translateX(-4px)', opacity:.72 },
+            { transform:'translateX(4px)', opacity:1 },
+            { transform:'translateX(0)', opacity:1 }
+          ],
+          { duration:260, easing:'steps(3,end)' }
+        );
+      }
+    }
+    n.addEventListener('pointerenter', dodge);
+    n.addEventListener('click', (e) => { e.preventDefault(); dodge(); });
+    y.addEventListener('click', onYes);
+  }
+
+  function startProposal(){
+    addLine('./corazon_y_zyelo.exe', 'echo');
+    addLine('Cargando corazon.dll... OK');
+    addQuestion('Zyelo, ¿quieres ser mi novia?');
+    const hint = document.createElement('div');
+    hint.className = 'dodge-hint'; hint.id = 'dodgeHintGlobal';
+    hint.textContent = '// ese botón no parece querer responder 😏';
+    termBody.appendChild(hint);
+    addButtonRow(stageAreYouSure);
+  }
+
+  function stageAreYouSure(){
+    addLine('Y', 'echo');
+    addQuestion('¿Segura? Esta acción no se puede deshacer.');
+    addButtonRow(stageSuccess);
+  }
+
+  function stageSuccess(){
+    addLine('Y', 'echo');
+    const block = document.createElement('div');
+    block.className = 'success-block';
+    block.innerHTML =
+      '<div class="line">✔ Compilando corazon_y_zyelo.exe... listo</div>' +
+      '<div class="line">✔ Instalando "nosotros"... listo</div>' +
+      '<div class="line">✔ Estado: NOVIOS OFICIALES 🧡</div>' +
+      '<div class="stamp-line">// te quiero, Steven</div>';
+    termBody.appendChild(block);
+    launchConfetti();
+  }
+
+  function launchConfetti(){
+    const glyphs = ['❤','☀','✦','01','10'];
+    for (let i = 0; i < 42; i++){
+      setTimeout(() => {
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.textContent = glyphs[Math.floor(Math.random()*glyphs.length)];
+        el.style.left = Math.random()*100 + 'vw';
+        el.style.color = Math.random() > .5 ? 'var(--crt-amber)' : 'var(--crt-yellow)';
+        el.style.fontSize = (12 + Math.random()*14) + 'px';
+        el.style.setProperty('--rot', (Math.random()>.5?1:-1)*(180+Math.random()*360)+'deg');
+        el.style.animationDuration = (2.4 + Math.random()*2) + 's';
+        document.body.appendChild(el);
+        el.addEventListener('animationend', () => el.remove());
+      }, i * 55);
+    }
+  }
+
+  /* ambient pixel dust */
+  const dustCount = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 18;
+  for (let i = 0; i < dustCount; i++){
+    const e = document.createElement('div');
+    e.className = 'pixel-dust';
+    e.style.left = Math.random()*100 + 'vw';
+    e.style.animationDuration = (7 + Math.random()*9) + 's';
+    e.style.animationDelay = (Math.random()*8) + 's';
+    document.body.appendChild(e);
+  }
+</script>
+</body>
+</html>
