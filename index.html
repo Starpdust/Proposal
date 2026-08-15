@@ -266,6 +266,43 @@
     text-align:center;
   }
 
+  .audio-progress{ margin-top:16px; }
+  .audio-progress-track{
+    position:relative;
+    height:20px;
+    display:flex; align-items:center;
+    cursor:pointer;
+    touch-action:none;
+  }
+  .audio-progress-bar{
+    position:relative; width:100%; height:4px;
+    border-radius:2px;
+    background:rgba(255,176,0,.15);
+  }
+  .audio-progress-track:hover .audio-progress-bar{ height:6px; }
+  .audio-progress-fill{
+    position:absolute; left:0; top:0; bottom:0; width:0%;
+    background:linear-gradient(90deg, var(--crt-ember), var(--crt-amber));
+    border-radius:2px;
+  }
+  .audio-progress-handle{
+    position:absolute; top:50%; left:0%;
+    width:11px; height:11px; border-radius:50%;
+    background:var(--crt-yellow);
+    box-shadow:0 0 8px rgba(255,224,102,.75);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+    transition:box-shadow .15s ease;
+  }
+  .audio-progress-track:hover .audio-progress-handle{ box-shadow:0 0 12px rgba(255,224,102,.95); }
+  .audio-time-row{
+    display:flex; justify-content:space-between;
+    margin-top:6px;
+    font-size:.68rem;
+    color:var(--crt-amber-dim);
+    font-variant-numeric:tabular-nums;
+  }
+
   .dots{ display:flex; justify-content:center; gap:6px; margin-top:16px; }
   .dots span{
     width:6px; height:6px; border-radius:1px;
@@ -382,6 +419,18 @@
         <span class="eq" id="eqBars"><span></span><span></span><span></span></span>
         <button class="ctrl-btn" id="nextBtn" aria-label="siguiente commit">▶</button>
       </div>
+      <div class="audio-progress">
+        <div class="audio-progress-track" id="audioProgressTrack">
+          <div class="audio-progress-bar">
+            <div class="audio-progress-fill" id="audioProgressFill"></div>
+          </div>
+          <div class="audio-progress-handle" id="audioProgressHandle"></div>
+        </div>
+        <div class="audio-time-row">
+          <span id="audioCurrentTime">0:00</span>
+          <span id="audioDuration">0:00</span>
+        </div>
+      </div>
       <div class="dots" id="dots"></div>
       <div class="audio-hint" id="audioHint"></div>
       <div id="youtubePlayer" aria-hidden="true"></div>
@@ -420,7 +469,7 @@
   ====================================================== */
   const tracks = [
     { hash:"a3f9c21", title:"Breaking the Habit — Linkin Park", youtube:"v2H4l9RpkwM",
-      msg:"Existías, y eso bastó para romper hábitos que llevaba meses sin atreverme a soltar. No fue voluntad: fuiste tú, empujándome sin saberlo." },
+      msg:"Existías, y eso bastó para romper hábitos que llevaba años sin atreverme a soltar. No fue voluntad: fuiste tú, empujándome sin saberlo." },
     { hash:"7b2e4f0", title:"Paradise — iVAN · Alien Stage", youtube:"ekSuZga5cM8",
       msg:"Bastaron unas semanas para que algo sin nombre empezara a arder en mí. Celos, urgencia, la certeza exacta de querer que me vieras solo a mí." },
     { hash:"c891d3a", title:"So Good — Weston Estate", youtube:"sjomZzrFYeQ",
@@ -434,18 +483,18 @@
     { hash:"4b7d0f9", title:"Haru ni Mau — Ado", youtube:"xIYfDbkq-SM",
       msg:"Como la primavera después de un invierno largo, algo que creía enterrado volvió a florecer en mí. Intenso, bonito, y completamente tuyo." },
     { hash:"8a1c3e5", title:"One Last Kiss — Hikaru Utada", youtube:"0Uhh62MUEic",
-      msg:"Que los recuerdos que ya tenemos sean apenas el comienzo de todos los que nos quedan por crear." },
+      msg:"Sigues proyectada en la pantalla más honesta que tengo: mi memoria. Hay recuerdos que decidí archivar para siempre, y tú ocupas los mejores." },
   ];
 
   /* ---------- BOOT SEQUENCE ---------- */
   const bootLinesData = [
     { type:'prompt', text:'whoami' },
-    { type:'out', text:'Stardust' },
+    { type:'out', text:'steven' },
     { type:'prompt', text:'cat primer_encuentro.log' },
-    { type:'out', text:'[Un domingo 18 de junio · 05:00 a.m.] Te escribí el primer mensaje con la pequeña esperanza de que respondieras.' },
+    { type:'out', text:'[domingo · 05:00 a.m.] Te escribí el primer mensaje con la pequeña esperanza de que respondieras.' },
     { type:'out', text:'Terminé gastando la suerte de una infinidad de vidas, solo por conocerte.' },
-    { type:'prompt', text:'git clone heart.repo' },
-    { type:'out', text:'Clonando en \'we\'...' },
+    { type:'prompt', text:'git clone corazon.repo nosotros' },
+    { type:'out', text:'Clonando en \'nosotros\'... listo.' },
   ];
   const bootLinesEl = document.getElementById('bootLines');
   let bootIdx = 0;
@@ -556,6 +605,74 @@
   const playIcon = document.getElementById('playIcon');
   const eqBars = document.getElementById('eqBars');
   const audioHint = document.getElementById('audioHint');
+  const progressTrack = document.getElementById('audioProgressTrack');
+  const progressFill = document.getElementById('audioProgressFill');
+  const progressHandle = document.getElementById('audioProgressHandle');
+  const currentTimeEl = document.getElementById('audioCurrentTime');
+  const durationEl = document.getElementById('audioDuration');
+  let progressInterval = null;
+  let isDragging = false;
+
+  function formatTime(sec){
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  function updateProgressUI(){
+    if (!youtubePlayer || !youtubeReady || isDragging) return;
+    let cur = 0, dur = 0;
+    try {
+      cur = youtubePlayer.getCurrentTime() || 0;
+      dur = youtubePlayer.getDuration() || 0;
+    } catch (e) { return; }
+    const pct = dur > 0 ? (cur / dur) * 100 : 0;
+    progressFill.style.width = pct + '%';
+    progressHandle.style.left = pct + '%';
+    currentTimeEl.textContent = formatTime(cur);
+    durationEl.textContent = formatTime(dur);
+  }
+
+  function startProgressPolling(){
+    stopProgressPolling();
+    progressInterval = setInterval(updateProgressUI, 250);
+  }
+  function stopProgressPolling(){
+    if (progressInterval){ clearInterval(progressInterval); progressInterval = null; }
+  }
+  function resetProgressUI(){
+    progressFill.style.width = '0%';
+    progressHandle.style.left = '0%';
+    currentTimeEl.textContent = '0:00';
+    durationEl.textContent = '0:00';
+  }
+
+  function seekFromEvent(e){
+    if (!youtubePlayer || !youtubeReady) return;
+    const rect = progressTrack.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let ratio = (clientX - rect.left) / rect.width;
+    ratio = Math.min(Math.max(ratio, 0), 1);
+    const dur = youtubePlayer.getDuration() || 0;
+    const seekTime = ratio * dur;
+    youtubePlayer.seekTo(seekTime, true);
+    progressFill.style.width = (ratio * 100) + '%';
+    progressHandle.style.left = (ratio * 100) + '%';
+    currentTimeEl.textContent = formatTime(seekTime);
+  }
+
+  progressTrack.addEventListener('pointerdown', (e) => {
+    if (!youtubePlayer || !youtubeReady) return;
+    isDragging = true;
+    seekFromEvent(e);
+    progressTrack.setPointerCapture(e.pointerId);
+  });
+  progressTrack.addEventListener('pointermove', (e) => {
+    if (isDragging) seekFromEvent(e);
+  });
+  progressTrack.addEventListener('pointerup', () => { isDragging = false; });
+  progressTrack.addEventListener('pointercancel', () => { isDragging = false; });
 
   window.onYouTubeIframeAPIReady = function(){
     const playerVars = {
@@ -584,13 +701,17 @@
             playIcon.textContent = '❚❚';
             eqBars.classList.add('show');
             audioHint.textContent = '';
+            startProgressPolling();
           } else if (event.data === YT.PlayerState.PAUSED){
             playIcon.textContent = '▶';
             eqBars.classList.remove('show');
+            stopProgressPolling();
           } else if (event.data === YT.PlayerState.ENDED){
             musicWasPlaying = false;
             playIcon.textContent = '▶';
             eqBars.classList.remove('show');
+            stopProgressPolling();
+            resetProgressUI();
           }
         },
         onError: function(event){
@@ -626,6 +747,8 @@
     playIcon.textContent = '▶';
     eqBars.classList.remove('show');
     audioHint.textContent = '';
+    stopProgressPolling();
+    resetProgressUI();
     youtubePlayer.cueVideoById(tracks[i].youtube);
     if (shouldPlay) youtubePlayer.playVideo();
   }
@@ -797,3 +920,4 @@
 </script>
 </body>
 </html>
+
