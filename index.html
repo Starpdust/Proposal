@@ -303,6 +303,40 @@
     font-variant-numeric:tabular-nums;
   }
 
+  .volume-row{ display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .ctrl-btn.mini{
+    width:30px; height:30px; font-size:.85rem;
+    border:1px solid rgba(255,176,0,.4);
+    color:var(--crt-amber);
+    background:transparent;
+    border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .15s ease;
+  }
+  .ctrl-btn.mini:hover{ background:rgba(255,176,0,.12); }
+  .volume-track{
+    position:relative; flex:1; max-width:120px; height:20px;
+    display:flex; align-items:center;
+    cursor:pointer; touch-action:none;
+  }
+  .volume-bar{
+    position:relative; width:100%; height:4px; border-radius:2px;
+    background:rgba(255,176,0,.15);
+  }
+  .volume-fill{
+    position:absolute; left:0; top:0; bottom:0; width:70%;
+    background:linear-gradient(90deg, var(--crt-amber), var(--crt-yellow));
+    border-radius:2px;
+  }
+  .volume-handle{
+    position:absolute; top:50%; left:70%;
+    width:10px; height:10px; border-radius:50%;
+    background:var(--crt-yellow);
+    box-shadow:0 0 6px rgba(255,224,102,.7);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+
   .dots{ display:flex; justify-content:center; gap:6px; margin-top:16px; }
   .dots span{
     width:6px; height:6px; border-radius:1px;
@@ -353,6 +387,15 @@
   .success-block{ margin-top:6px; }
   .success-block .line{ color:var(--crt-yellow); }
   .stamp-line{ margin-top:14px; color:var(--crt-amber-dim); font-style:normal; }
+  .celebration-img{
+    display:block;
+    max-width:220px; width:75%;
+    margin:18px auto 4px;
+    border-radius:14px;
+    border:2px solid var(--crt-amber);
+    box-shadow:0 0 30px rgba(255,176,0,.35);
+    animation:popIn .5s ease;
+  }
 
   .confetti-piece{
     position:fixed; top:-5vh;
@@ -430,6 +473,15 @@
           <span id="audioCurrentTime">0:00</span>
           <span id="audioDuration">0:00</span>
         </div>
+        <div class="volume-row">
+          <button class="ctrl-btn mini" id="muteBtn" aria-label="silenciar">🔊</button>
+          <div class="volume-track" id="volumeTrack">
+            <div class="volume-bar">
+              <div class="volume-fill" id="volumeFill"></div>
+            </div>
+            <div class="volume-handle" id="volumeHandle"></div>
+          </div>
+        </div>
       </div>
       <div class="dots" id="dots"></div>
       <div class="audio-hint" id="audioHint"></div>
@@ -483,7 +535,7 @@
     { hash:"4b7d0f9", title:"Haru ni Mau — Ado", youtube:"xIYfDbkq-SM",
       msg:"Como la primavera después de un invierno largo, algo que creía enterrado volvió a florecer en mí. Intenso, bonito, y completamente tuyo." },
     { hash:"8a1c3e5", title:"One Last Kiss — Hikaru Utada", youtube:"0Uhh62MUEic",
-      msg:"Sigues proyectada en la pantalla más honesta que tengo: mi memoria. Hay recuerdos que decidí archivar para siempre, y tú ocupas los mejores." },
+      msg:"Que los recuerdos que ya tenemos sean apenas el comienzo de todos los que nos quedan por crear." },
   ];
 
   /* ---------- BOOT SEQUENCE ---------- */
@@ -491,10 +543,10 @@
     { type:'prompt', text:'whoami' },
     { type:'out', text:'steven' },
     { type:'prompt', text:'cat primer_encuentro.log' },
-    { type:'out', text:'[domingo · 05:00 a.m.] Te escribí el primer mensaje con la pequeña esperanza de que respondieras.' },
-    { type:'out', text:'Terminé gastando la suerte de una infinidad de vidas, solo por conocerte.' },
-    { type:'prompt', text:'git clone corazon.repo nosotros' },
-    { type:'out', text:'Clonando en \'nosotros\'... listo.' },
+    { type:'out', text:'[Un domingo 18 de julio a las 6 am] Te escribí el primer mensaje con la pequeña esperanza de que respondieras.' },
+    { type:'out', text:'Para que al final terminara gastando la suerte de una infinidad de vidas, solo por conocerte.' },
+    { type:'prompt', text:'git clone Heart.repo We' },
+    { type:'out', text:'Clonando en \'We\'... listo.' },
   ];
   const bootLinesEl = document.getElementById('bootLines');
   let bootIdx = 0;
@@ -674,6 +726,59 @@
   progressTrack.addEventListener('pointerup', () => { isDragging = false; });
   progressTrack.addEventListener('pointercancel', () => { isDragging = false; });
 
+  /* ---------- VOLUME ---------- */
+  const muteBtn = document.getElementById('muteBtn');
+  const volumeTrack = document.getElementById('volumeTrack');
+  const volumeFill = document.getElementById('volumeFill');
+  const volumeHandle = document.getElementById('volumeHandle');
+  let currentVolume = 70;
+  let lastVolume = 70;
+  let isDraggingVolume = false;
+
+  function setVolumeUI(vol){
+    volumeFill.style.width = vol + '%';
+    volumeHandle.style.left = vol + '%';
+    muteBtn.textContent = vol <= 0 ? '🔇' : '🔊';
+  }
+  setVolumeUI(currentVolume);
+
+  function applyVolume(vol){
+    currentVolume = Math.min(Math.max(vol, 0), 100);
+    setVolumeUI(currentVolume);
+    if (youtubePlayer && youtubeReady){
+      youtubePlayer.setVolume(currentVolume);
+      if (currentVolume > 0) youtubePlayer.unMute();
+    }
+  }
+
+  function volumeFromEvent(e){
+    const rect = volumeTrack.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let ratio = (clientX - rect.left) / rect.width;
+    ratio = Math.min(Math.max(ratio, 0), 1);
+    applyVolume(Math.round(ratio * 100));
+  }
+
+  volumeTrack.addEventListener('pointerdown', (e) => {
+    isDraggingVolume = true;
+    volumeFromEvent(e);
+    volumeTrack.setPointerCapture(e.pointerId);
+  });
+  volumeTrack.addEventListener('pointermove', (e) => {
+    if (isDraggingVolume) volumeFromEvent(e);
+  });
+  volumeTrack.addEventListener('pointerup', () => { isDraggingVolume = false; });
+  volumeTrack.addEventListener('pointercancel', () => { isDraggingVolume = false; });
+
+  muteBtn.addEventListener('click', () => {
+    if (currentVolume > 0){
+      lastVolume = currentVolume;
+      applyVolume(0);
+    } else {
+      applyVolume(lastVolume || 70);
+    }
+  });
+
   window.onYouTubeIframeAPIReady = function(){
     const playerVars = {
       autoplay: 0, controls: 0, disablekb: 1, fs: 0,
@@ -693,6 +798,7 @@
       events: {
         onReady: function(){
           youtubeReady = true;
+          youtubePlayer.setVolume(currentVolume);
           audioHint.textContent = '';
         },
         onStateChange: function(event){
@@ -860,12 +966,12 @@
   }
 
   function startProposal(){
-    addLine('./corazon_y_zyelo.exe', 'echo');
-    addLine('Cargando corazon.dll... OK');
+    addLine('./Heart.exe', 'Hecho');
+    addLine('Cargando Heart.dll... OK');
     addQuestion('Zyelo, ¿quieres ser mi novia?');
     const hint = document.createElement('div');
     hint.className = 'dodge-hint'; hint.id = 'dodgeHintGlobal';
-    hint.textContent = '// ese botón no parece querer responder 😏';
+    hint.textContent = '// ¿POR QUE QUIERES DARLE A ESE BOTÓN? ¿ALÓ?';
     termBody.appendChild(hint);
     addButtonRow(stageAreYouSure);
   }
@@ -881,10 +987,11 @@
     const block = document.createElement('div');
     block.className = 'success-block';
     block.innerHTML =
-      '<div class="line">✔ Compilando corazon_y_zyelo.exe... listo</div>' +
-      '<div class="line">✔ Instalando "nosotros"... listo</div>' +
-      '<div class="line">✔ Estado: NOVIOS OFICIALES 🧡</div>' +
-      '<div class="stamp-line">// te quiero, Steven</div>';
+      '<div class="line">✔ Compilando... listo</div>' +
+      '<div class="line">✔ Instalando "we"... listo</div>' +
+      '<div class="line">✔ Estado: POLOLOS 🧡</div>' +
+      '<img src="celebracion.jpg" alt="" class="celebration-img" onerror="this.style.display=\'none\'">' +
+      '<div class="stamp-line">// Te amo mucho - Steven</div>';
     termBody.appendChild(block);
     launchConfetti();
   }
